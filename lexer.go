@@ -230,7 +230,7 @@ func (l *tomlLexer) lexRvalue() tomlLexStateFn {
 			return l.lexNumber
 		}
 
-		return l.errorf("no value can start with %c", next)
+		return l.lexUnquotedString
 	}
 
 	l.emit(tokenEOF)
@@ -559,6 +559,22 @@ func (l *tomlLexer) lexString() tomlLexStateFn {
 		discardLeadingNewLine = true
 		acceptNewLines = true
 	}
+
+	str, err := l.lexStringAsString(terminator, discardLeadingNewLine, acceptNewLines)
+	if err != nil {
+		return l.errorf(err.Error())
+	}
+
+	l.emitWithValue(tokenString, str)
+	l.fastForward(len(terminator))
+	l.ignore()
+	return l.lexRvalue
+}
+
+func (l *tomlLexer) lexUnquotedString() tomlLexStateFn {
+	terminator := "\n"
+	discardLeadingNewLine := false
+	acceptNewLines := false
 
 	str, err := l.lexStringAsString(terminator, discardLeadingNewLine, acceptNewLines)
 	if err != nil {
